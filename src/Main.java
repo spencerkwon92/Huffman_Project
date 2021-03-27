@@ -1,8 +1,7 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Comparator;
-import java.util.PriorityQueue;
-import java.util.Scanner;
+import java.io.*;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.stream.Stream;
 /**
  * MESSAGE:
  * 성준아! 이건 내가 임의로 공부하려고 배껴온거야 ㅋㅋ 그래서 아직 적용인 안된게 많다ㅜㅜ
@@ -19,82 +18,135 @@ import java.util.Scanner;
  *
  */
 // 호프만을 구현하기 위한 노드
-class Node{
-    int item;
-    char c;
-    Node left;
-    Node right;
-}
+class Node implements Comparable<Node>{
+    char data;
+    int freq;
+    Node left, right;
 
-class Comparing implements Comparator<Node> {
+    Node(){}
+    Node(char data, int frequency){
+        this.data = data;
+        this.freq = frequency;
+    }
+
     @Override
-    public int compare(Node x, Node y) {
-        return x.item - y.item;
+    public int compareTo(Node node) {
+        return freq - node.freq;
     }
 }
+
 
 public class Main {
 
-//    Main(String filename) throws FileNotFoundException {
-//        File f = new File(filename);
-//        Scanner scan = new Scanner(f);
+    private static Scanner scan = new Scanner(System.in);
+    private static Map<Character, String> prefixCodeTable = new HashMap<>();
+    public static int bitwight = 0;
+
+    Main() throws IOException {
+        String path = "/Users/sungjin.spencerkwon/Desktop/univ/2021 Winter Semester/" +
+                "CS 301/Final project referrence/data/plaintext/palindrome.txt";
+        File file = new File(path);
+
+        BufferedReader br =new BufferedReader(new FileReader(file));
+        String line;
+        String encodeData = null;
+        while((line=br.readLine())!=null) {
+            encodeData = encoding(line);
+        }
+        System.out.println("****");
+        System.out.println(bitwight);
+    }
+
+//    Main(){
+//        while(scan.hasNext()){
+//            String data = scan.nextLine();
+//            System.out.println(data);
+//            System.out.println("Original Input Data : " + data);
+//        }
+//
+//        String encodeData = encoding(data);
+//        System.out.println("Encoded Data : " + encodeData);
 //
 //    }
 
-    Main(){
+    public static Node buildTree(PriorityQueue<Node> priQue) {
+        if(priQue.size() == 1) {
+            return priQue.poll();
+        }else {
+            Node leftNode = priQue.poll();
+            Node rightNode = priQue.poll();
+            Node sumNode = new Node();
 
-        int n = 4;
-        char[] arr = {'A', 'B', 'C', 'D', 'E'};
-        int[] freq = {5, 1, 6, 3};
+            if(leftNode !=null && rightNode!=null){
+                sumNode.data = '-';
+                sumNode.freq = leftNode.freq + rightNode.freq;
+                sumNode.left = leftNode;
+                sumNode.right = rightNode;
+            }
+            priQue.offer(sumNode);
+            return buildTree(priQue);
 
-        PriorityQueue<Node> q = new PriorityQueue<Node>(n, new Comparing());
-        for(int i=0; i<n; i++) {
-            Node nd = new Node();
-            nd.c = arr[i];
-            nd.item = freq[i];
-
-            nd.left = null;
-            nd.right = null;
-            q.add(nd);
         }
+    }
 
-        Node root  = null;
-
-        while(q.size()>1) {
-            Node x = q.peek();
-            q.poll();
-
-            Node y = q.peek();
-            q.poll();
-
-            Node f = new Node();
-            f.item = x.item + y.item;
-            f.c='-';
-            f.left = x;
-            f.right = y;
-            root = f;
-            q.add(f);
+    public static String encoding(String data) {
+        Map<Character, Integer> charFreq = new HashMap<>();
+        for(char c:data.toCharArray()) {
+            if(!charFreq.containsKey(c)) {
+                charFreq.put(c,1);
+            }else {
+                int no = charFreq.get(c);
+                charFreq.put(c, ++no);
+            }
         }
-        System.out.println("Char    |    Code");
-        System.out.println("-----------------");
-        code(root, "");
+//        System.out.println("Frequency by Character : " + charFreq);
+
+        PriorityQueue<Node> priorityQueue = new PriorityQueue<>();
+        Set<Character> ketSet = charFreq.keySet();
+        for(char c:ketSet) {
+            Node node = new Node(c, charFreq.get(c));
+            priorityQueue.offer(node);
+        }
+        Node rootNode = buildTree(priorityQueue);
+        setPrefixCode(rootNode, "");
+
+        StringBuilder sb = new StringBuilder();
+        for(char c:data.toCharArray()) {
+            sb.append(prefixCodeTable.get(c));
+        }
+        return sb.toString();
+    }
+
+    public static void setPrefixCode(Node n, String code) {
+        if (n==null) return;
+
+        if(n.data != '-' && n.left== null && n.right == null) {
+            prefixCodeTable.put(n.data, code);
+//            System.out.println("- "+n.data + "("+n.freq + ") = " + code);
+            System.out.println(code + " "+ n.data + " "+ "Frequency : "+n.freq + " "+ code.length());
+
+            int bit = code.length()*n.freq;
+            bitwight = bitwight + bit;
+        }else {
+            setPrefixCode(n.left, code+'0');
+            setPrefixCode(n.right, code+'1');
+        }
 
     }
 
-    public static void code(Node root, String str) {
-        if(root.left ==null && root.right ==null && Character.isLetter(root.c)) {
-            System.out.println(root.c + "   |   " + str);
-            return;
-        }
-        code(root.left, str + "0");
-        code(root.right, str + "1");
+    public static <K, V> Stream<K> getKeysByValue(Map<K, V> map, V value){
+        return map.
+                entrySet().
+                stream().
+                filter(entry -> value.equals(entry.getValue())).
+                map(Map.Entry::getKey);
     }
 
     public static void main(String[] args) throws Exception{
-//	    String filename = args[0]; // input 파일 들고 오기 위핸서 넣은거야!!
+//        String filename = args[0];// input 파일 들고 오기 위핸서 넣은거야!!
 //        new Main(filename);
 
         new Main();
-
     }
+
 }
