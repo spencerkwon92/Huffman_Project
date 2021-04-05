@@ -10,12 +10,9 @@ import java.util.stream.Stream;
  *
  */
 
-
-
 /**
  * Final Project
  * By.Sungjin Kwon, Sungjoon Ha
- *
  *
  */
 // 호프만을 구현하기 위한 노드
@@ -37,76 +34,56 @@ class Node implements Comparable<Node>{
 }
 
 
-public class Main {
+public class EncodeFile {
 
     private static Scanner scan = new Scanner(System.in);
     private static Map<Character, String> prefixCodeTable = new HashMap<>();
     public static int bitwight = 0;
     public static FileOutputStream fos;
+    public static String outPutFileName;
 
-    static {
-        try {
-            fos = new FileOutputStream("output.txt");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+    EncodeFile(String filename) throws IOException {
+
+        try{
+
+            Path path = Paths.get(filename);
+            outPutFileName = filename.substring(0,filename.length()-4);
+
+            fos = new FileOutputStream(outPutFileName+".zip301");
+
+            String data = Files.readString(path, StandardCharsets.ISO_8859_1);
+            String code = encoding(data);
+            String division = "****"+"\n";
+            String bits = String.valueOf(bitwight) +"\n";
+            fos.write(division.getBytes());
+            fos.write(bits.getBytes());
+            for(int i=0; i<code.length(); i+=8){
+                String singleByte = code.substring(i,i+8);
+                int value = Integer.parseInt(singleByte,2);
+                fos.write(value);
+            }
+
+            fos.close();
+
+
+
+        }catch (IOException e){
+
+            }catch (NumberFormatException ef){
+
         }
+
+        System.out.println("Huffman Zip - TEAM REFERENCE IMPLEMENTATION ***");
+        System.out.println("Generating frequency data...");
+        System.out.println("Building the Huffman tree..."+(buildTreeE - buildTreeS)/1000.0 + " sec");
+        System.out.println("Generating the Huffman code...");
+        System.out.println("Encoding the document..." + (encodingE - encodingS)/1000.0 + " sec");
+        System.out.println("Writing output file..." + (prefixE - prefixS)/1000.0 + " sec");
+        System.out.println("Wrote output to: " + outPutFileName+".zip301");
+        System.out.println("TOTAL TIME: ");
     }
 
-//    Main() throws IOException {
-////        while(scan.hasNext()){
-////            String data = scan.nextLine();
-////            System.out.println(data);
-////            System.out.println("Original Input Data : " + data);
-////        }
-//
-//        String data = "Was it a rat I saw?\n";
-//
-//        String encodeData = encoding(data);
-//        String division = "****"+"\n";
-//        fos.write(division.getBytes());
-//        String bits = String.valueOf(bitwight)+"\n";
-//        fos.write(bits.getBytes());
-//
-//        for(int i=0; i<encodeData.length(); i+=8){
-//            String singleByte = encodeData.substring(i,i+8);
-//            int value = Integer.parseInt(singleByte,2);
-//            fos.write(value);
-//        }
-//        fos.write(encodeData.getBytes());
-//
-//        fos.close();
-//
-//        System.out.println("");
-//        System.out.println(bitwight);
-//
-//    }
-
-    Main() throws IOException {
-        Path path = Paths.get("/Users/sungjin.spencerkwon/IdeaProjects/Huffman Project/src/palindrome.txt");
-
-        String data = Files.readString(path, StandardCharsets.ISO_8859_1);
-        String code = encoding(data);
-        String division = "****"+"\n";
-        fos.write(division.getBytes());
-        String bits = String.valueOf(bitwight)+"\n";
-        fos.write(bits.getBytes());
-
-//        for(int i=0; i<code.length(); i+=8){
-//            String singleByte = code.substring(i,i+8);
-//            int value = Integer.parseInt(singleByte,2);
-//            fos.write(value);
-//        }
-        fos.write(code.getBytes());
-
-        fos.close();
-
-        System.out.println("");
-        System.out.println(bitwight);
-
-
-    }
-
-
+    static long buildTreeS = System.currentTimeMillis();
     public static Node buildTree(PriorityQueue<Node> priQue) {
         if(priQue.size() == 1) {
             return priQue.poll();
@@ -126,6 +103,9 @@ public class Main {
 
         }
     }
+    static long buildTreeE = System.currentTimeMillis();
+
+    static long encodingS = System.currentTimeMillis();
 
     public static String encoding(String data) throws IOException {
         Map<Character, Integer> charFreq = new HashMap<>();
@@ -137,7 +117,6 @@ public class Main {
                 charFreq.put(c, ++no);
             }
         }
-//        System.out.println("Frequency by Character : " + charFreq);
 
         PriorityQueue<Node> priorityQueue = new PriorityQueue<>();
         Set<Character> ketSet = charFreq.keySet();
@@ -155,26 +134,37 @@ public class Main {
         return sb.toString();
     }
 
+    static long encodingE = System.currentTimeMillis();
+
+    static long prefixS = System.currentTimeMillis();
     public static void setPrefixCode(Node n, String code) throws IOException {
         if (n==null) return;
 
         if(n.data != '-' && n.left== null && n.right == null) {
             prefixCodeTable.put(n.data, code);
-//            System.out.println("- "+n.data + "("+n.freq + ") = " + code +" "+(code.length()* n.freq));
-//            System.out.println(code + " "+ n.data);
-//            String str = "- "+n.data + "("+n.freq + ") = " + code +" "+(code.length()* n.freq)+"\n";
-            String str = code+" "+n.data+"\n";
 
-            fos.write(str.getBytes());
+            if(n.data == '\n'){
+                fos.write((code+" newLine"+"\n").getBytes());
+            }else if(n.data == ' '){
+                fos.write((code+" Space"+"\n").getBytes());
+            }else if(n.data == '\r'){
+                fos.write((code+" Return"+"\n").getBytes());
+            }else if(n.data =='\t'){
+                fos.write((code+" Tab"+"\n").getBytes());
+            }else {
+                fos.write((code+" "+n.data+"\n").getBytes());
+            }
 
             int bit = code.length()*n.freq;
             bitwight = bitwight + bit;
+
         }else {
             setPrefixCode(n.left, code+'0');
             setPrefixCode(n.right, code+'1');
         }
 
     }
+    static long prefixE = System.currentTimeMillis();
 
     public static <K, V> Stream<K> getKeysByValue(Map<K, V> map, V value){
         return map.
@@ -184,11 +174,14 @@ public class Main {
                 map(Map.Entry::getKey);
     }
 
-    public static void main(String[] args) throws Exception{
-//        String filename = args[0];// input 파일 들고 오기 위핸서 넣은거야!!
-//        new Main(filename);
 
-        new Main();
+    public static void main(String[] args) throws Exception{
+        String filename = args[0];// input 파일 들고 오기 위핸서 넣은거야!!
+
+        new EncodeFile(filename);
+
+//        outPutFileName = filename.substring(0,filename.length()-4);
+
     }
 
 }
